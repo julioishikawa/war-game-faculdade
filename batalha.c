@@ -15,38 +15,25 @@
      return (rand() % 6) + 1;
  }
  
-/*
- * Ataque bem-sucedido no formato literal do enunciado:
- * defensor muda de cor imediatamente e recebe metade das tropas do atacante.
- */
- static void aplicar_ataque(Territorio *atacante, Territorio *defensor) {
-    /* Metade das tropas do atacante avança para o território conquistado. */
+/* Conquista somente quando o defensor chega a 0 tropas. */
+static void conquistar_territorio(Territorio *atacante, Territorio *defensor) {
     int tropas_transferidas = atacante->tropas / 2;
-    if (tropas_transferidas < 1) tropas_transferidas = 1;
+    if (tropas_transferidas < 1) {
+        tropas_transferidas = 1;
+    }
     if (atacante->tropas - tropas_transferidas < 1) {
-        /* Garante que o atacante mantenha pelo menos 1 tropa de origem. */
         tropas_transferidas = atacante->tropas - 1;
     }
 
-    /* O defensor muda de dono: copia a cor do atacante. */
     strncpy(defensor->cor, atacante->cor, sizeof(defensor->cor) - 1);
     defensor->cor[sizeof(defensor->cor) - 1] = '\0';
 
-    /* Aplica transferência de tropas entre os territórios. */
     atacante->tropas -= tropas_transferidas;
     defensor->tropas = tropas_transferidas;
 
-    printf("\nResultado: ataque venceu! %s foi conquistado por %s.\n",
+    printf("\nTerritorio conquistado! %s agora pertence a %s.\n",
            defensor->nome, atacante->cor);
- }
- 
- /* Ataque falhou: atacante perde 1 tropa (se tiver mais de 1). */
- static void aplicar_derrota(Territorio *atacante) {
-     if (atacante->tropas > 1) {
-         atacante->tropas--;
-     }
-     printf("\nResultado: ataque falhou. %s perdeu 1 tropa.\n", atacante->nome);
- }
+}
  
  int batalha_ataque_valido(const Territorio *mapa, int idx_atacante, int idx_defensor) {
     /* Acesso por ponteiro para reforçar a manipulação do vetor dinâmico. */
@@ -70,9 +57,9 @@
  
 /*
  * Executa UMA rolagem de dados entre atacante e defensor.
- * - Atacante vence (dado_atacante > dado_defensor): defensor e conquistado,
- *   muda de cor e recebe metade das tropas do atacante.
- * - Defensor vence (empate ou dado_defensor >= dado_atacante): atacante perde 1 tropa.
+ * - Vitoria do atacante: defensor perde 1 tropa.
+ * - Vitoria do defensor (ou empate): atacante perde 1 tropa.
+ * - Conquista so ocorre quando defensor chega a 0 tropas.
  */
 void atacar(Territorio *atacante, Territorio *defensor) {
      int dado_atacante = rolar_dado();
@@ -82,11 +69,21 @@ void atacar(Territorio *atacante, Territorio *defensor) {
      printf("  Atacante (%s): %d\n", atacante->nome, dado_atacante);
      printf("  Defensor (%s): %d\n", defensor->nome, dado_defensor);
  
-     if (dado_atacante > dado_defensor) {
-         aplicar_ataque(atacante, defensor);
-     } else {
-         aplicar_derrota(atacante);
-     }
+    if (dado_atacante > dado_defensor) {
+        if (defensor->tropas > 0) {
+            defensor->tropas--;
+        }
+        printf("\nResultado: ataque venceu! %s perdeu 1 tropa.\n", defensor->nome);
+
+        if (defensor->tropas == 0) {
+            conquistar_territorio(atacante, defensor);
+        }
+    } else {
+        if (atacante->tropas > 1) {
+            atacante->tropas--;
+        }
+        printf("\nResultado: ataque falhou. %s perdeu 1 tropa.\n", atacante->nome);
+    }
  }
 
 void batalha_atacar(Territorio *atacante, Territorio *defensor) {
